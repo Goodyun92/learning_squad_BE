@@ -21,7 +21,7 @@ public class JwtTokenFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
 
-    //빈 의존성 주입
+    //빈
     public JwtTokenFilter(@Qualifier("access")JwtTokenProvider jwtTokenProvider) {
         this.jwtTokenProvider = jwtTokenProvider;
     }
