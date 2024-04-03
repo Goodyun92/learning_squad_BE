@@ -1,52 +1,58 @@
 package com.capstone.learning_squad_be.config;
 
-import com.capstone.learning_squad_be.security.CustomUserDetailsService;
+import com.capstone.learning_squad_be.jwt.JwtTokenProvider;
+import com.capstone.learning_squad_be.security.JwtAccessDeniedHandler;
+import com.capstone.learning_squad_be.security.JwtAuthenticationEntryPoint;
 import com.capstone.learning_squad_be.security.filter.JwtExceptionFilter;
 import com.capstone.learning_squad_be.security.filter.JwtTokenFilter;
-import com.capstone.learning_squad_be.service.UserService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
-@RequiredArgsConstructor
-public class SecurityConfig {
+public class SecurityConfig extends WebSecurityConfigurerAdapter{
 
-    private final UserService userService;
-
-    @Autowired
-    private CustomUserDetailsService customUserDetailsService;
-
-    @Autowired
     private final JwtExceptionFilter jwtExceptionFilter;
 
-    @Value("${jwt.token.secret}")
-    private String secretKey;
+    private final JwtTokenProvider jwtTokenProvider;
+
+    public SecurityConfig(@Qualifier("access")JwtTokenProvider jwtTokenProvider, JwtExceptionFilter jwtExceptionFilter){
+        this.jwtTokenProvider = jwtTokenProvider;
+        this.jwtExceptionFilter = jwtExceptionFilter;
+    }
+
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception{
-        return httpSecurity
+    @Override
+    public AuthenticationManager authenticationManagerBean() throws Exception {
+        return super.authenticationManagerBean();
+    }
+
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http
                 .httpBasic().disable()
                 .csrf().disable()
                 .cors().and()
+                .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                .and()
                 .authorizeRequests()
-                .antMatchers("/api/users/join","/api/users/login","/api/users/refresh").permitAll() //join, login, refresh 항상 허용
-                .antMatchers("/api/**").authenticated() //인증 필요
-                .antMatchers("/**").hasAuthority("ROLE_ADMIN") // 'ADMIN' 역할을 가진 사용자에게 모든 경로에 대한 접근 허용
+                .antMatchers("/api/users/join", "/api/users/login", "/api/users/refresh").permitAll()
+                .antMatchers("/api/**").authenticated()
+                .antMatchers("/**").hasAuthority("ROLE_ADMIN")
                 .and()
-                .sessionManagement()
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS) //jwt사용
-                .and()
-                .addFilterBefore(new JwtTokenFilter(userService, secretKey), UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(jwtExceptionFilter, JwtTokenFilter.class) // JwtExceptionFilter 추가
-                .build();
+                .addFilterBefore(new JwtTokenFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(jwtExceptionFilter, JwtTokenFilter.class)
+                .exceptionHandling()
+                .authenticationEntryPoint(new JwtAuthenticationEntryPoint()) // 인증 예외 처리 핸들러
+                .accessDeniedHandler(new JwtAccessDeniedHandler()); // 인가 예외 처리 핸들러
     }
+
 }

@@ -1,16 +1,12 @@
 package com.capstone.learning_squad_be.security.filter;
 
-import com.capstone.learning_squad_be.domain.enums.Role;
-import com.capstone.learning_squad_be.security.JwtTokenUtil;
-import com.capstone.learning_squad_be.service.UserService;
-import io.jsonwebtoken.ExpiredJwtException;
-import lombok.RequiredArgsConstructor;
+import com.capstone.learning_squad_be.jwt.JwtTokenProvider;
+import io.jsonwebtoken.*;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpHeaders;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import javax.servlet.FilterChain;
@@ -18,54 +14,34 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.Collections;
 
-@RequiredArgsConstructor
 @Slf4j
+@Component
 public class JwtTokenFilter extends OncePerRequestFilter {
 
-    private final UserService userService;
-    private final String secretKey;
+    private final JwtTokenProvider jwtTokenProvider;
+
+    //빈 주입
+    public JwtTokenFilter(@Qualifier("access")JwtTokenProvider jwtTokenProvider) {
+        this.jwtTokenProvider = jwtTokenProvider;
+    }
 
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException, ExpiredJwtException {
 
-        final String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
-        log.info("authorization:{}", authorization);
+        String token = jwtTokenProvider.resolveToken((HttpServletRequest) request);
+        log.info("token:{}",token);
 
-        //token 안보내면 block
-        if(authorization == null || !authorization.startsWith("Bearer ")){
-            log.error("authorization 잘못 보냄.");
-            filterChain.doFilter(request, response);
-            return;
+        if (token != null && jwtTokenProvider.validateToken(token)) {
+            // 토큰이 유효하면 토큰으로부터 유저 정보를 받아옵니다.
+            Authentication authentication = jwtTokenProvider.getAuthentication(token);
+
+            log.info("authentication:{}",authentication);
+
+            SecurityContextHolder.getContext().setAuthentication(authentication);
         }
 
-        // token 꺼내기
-        String token = authorization.split(" ")[1];
-
-//         Token Expired 되었는지 여부
-        if (!JwtTokenUtil.isValidate(token, secretKey)) {
-            log.error("토큰이 만료되었습니다.");
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        //userName token에서 꺼내기
-        String userName = JwtTokenUtil.getUserName(token,secretKey);
-        log.info("userName:{}",userName);
-
-        //role token에서 꺼내기
-        Role role = JwtTokenUtil.getRoleFromToken(token, secretKey);
-
-        //권한 부여
-        SimpleGrantedAuthority authority = new SimpleGrantedAuthority(role.name());
-        UsernamePasswordAuthenticationToken authenticationToken =
-                new UsernamePasswordAuthenticationToken(userName, null, Collections.singletonList(authority));
-
-        //detail 넣어주기
-        authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-        SecurityContextHolder.getContext().setAuthentication(authenticationToken);
         filterChain.doFilter(request, response);
 
     }

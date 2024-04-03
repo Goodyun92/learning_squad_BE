@@ -1,7 +1,11 @@
 package com.capstone.learning_squad_be.security.filter;
 
-import io.jsonwebtoken.ExpiredJwtException;
-import org.springframework.http.HttpStatus;
+import com.capstone.learning_squad_be.jwt.JwtTokenProvider;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.jsonwebtoken.JwtException;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -10,41 +14,62 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 @Component
+@Slf4j
 public class JwtExceptionFilter extends OncePerRequestFilter {
 
+    private final JwtTokenProvider jwtTokenProvider;
+
+    public JwtExceptionFilter(@Qualifier("access")JwtTokenProvider jwtTokenProvider) {
+        this.jwtTokenProvider = jwtTokenProvider;
+    }
+
     @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+        log.info("exception filter running");
+
+        String path = request.getRequestURI();
+
+        // 회원가입, 로그인, 토큰 갱신 요청에 대해 토큰 필터를 적용하지 않음
+        if (path.startsWith("/api/users/join") || path.startsWith("/api/users/login") || path.startsWith("/api/users/refresh")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        // 토큰 가져오기
+        String token = jwtTokenProvider.resolveToken(request);
+
+        // 토큰이 null이면 예외 처리
+        if (token == null) {
+            log.info("JWT token is missing.");
+            setErrorResponse(request, response, new JwtException("JWT token is missing"));
+            return;
+        }
 
         try {
-
-            String path = request.getRequestURI();
-
-            // 회원가입, 로그인, 토큰 갱신 요청에 대해 토큰 필터를 적용하지 않음
-            if (path.startsWith("/api/users/join") || path.startsWith("/api/users/login") || path.startsWith("/api/users/refresh")) {
-                filterChain.doFilter(request, response);
-                return;
-            }
-
-            String jwtToken = request.getHeader("Authorization"); // 토큰 헤더 조회
-
-            if (jwtToken == null || jwtToken.isEmpty()) {
-                // JWT 토큰이 없는 경우
-                response.setStatus(HttpStatus.UNAUTHORIZED.value());
-                response.getWriter().write("JWT token is missing");
-                return; // 필터 체인의 나머지 부분을 실행하지 않음
-            }
-
             filterChain.doFilter(request, response);
-        } catch (ExpiredJwtException e) {
-            // JWT 만료 예외 처리
-            response.setStatus(HttpStatus.UNAUTHORIZED.value());
-            response.getWriter().write("Expired JWT token");
+        } catch (JwtException ex) {
+            setErrorResponse(request, response, ex);
         }
-        // 추가적인 JWT 관련 예외 처리가 필요한 경우 여기에 catch 블록 추가
-
     }
+
+    public void setErrorResponse(HttpServletRequest req, HttpServletResponse res, Throwable ex) throws IOException {
+
+        res.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+
+        final Map<String, Object> body = new HashMap<>();
+        body.put("status", HttpServletResponse.SC_UNAUTHORIZED);
+        body.put("error", "Unauthorized");
+        body.put("message", ex.getMessage());   // ex.getMessage() 는 jwtException을 발생시키면서 입력한 메세지
+        body.put("path", req.getServletPath());
+        final ObjectMapper mapper = new ObjectMapper();
+        mapper.writeValue(res.getOutputStream(), body);
+    }
+
+
+
 }

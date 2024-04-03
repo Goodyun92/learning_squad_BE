@@ -7,16 +7,19 @@ import com.capstone.learning_squad_be.dto.user.UserJoinRequestDto;
 import com.capstone.learning_squad_be.dto.user.UserLoginRequestDto;
 import com.capstone.learning_squad_be.dto.user.UserTokenReturnDto;
 import com.capstone.learning_squad_be.exception.AppException;
+import com.capstone.learning_squad_be.jwt.JwtService;
 import com.capstone.learning_squad_be.repository.user.UserRepository;
+import com.capstone.learning_squad_be.security.CustomUserDetail;
 import com.capstone.learning_squad_be.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 
 @Slf4j
 @RestController
@@ -26,6 +29,7 @@ public class UserController {
 
     private final UserService userService;
     private final UserRepository userRepository;
+    private final JwtService jwtService;
 
     @PostMapping("/join")
     public ReturnDto<Void> join(@RequestBody UserJoinRequestDto dto){
@@ -39,7 +43,7 @@ public class UserController {
         String accessToken = userService.login(dto.getUserName(), dto.getPassword());
 
         // Refresh Token 생성
-        String refreshToken = userService.getRefreshToken(dto.getUserName());
+        String refreshToken = jwtService.getRefreshToken(dto.getUserName());
 
         Cookie cookie = new Cookie("refreshToken", refreshToken);
 
@@ -60,9 +64,11 @@ public class UserController {
     }
 
     @PutMapping("/updateNickName")
-    public ReturnDto<User> updateNickName(@RequestParam String nickName, Authentication authentication) {
+    public ReturnDto<User> updateNickName(@RequestParam String nickName, @AuthenticationPrincipal CustomUserDetail customUserDetail) {
+        log.info("update start");
         // 현재 userName
-        String userName = authentication.getName();
+        String userName = customUserDetail.getUser().getUserName();
+        log.info("userName:{}",userName);
 
         User user = userService.updateNickName(userName, nickName);
 
@@ -70,9 +76,9 @@ public class UserController {
     }
 
     @GetMapping("/info")
-    public ReturnDto<User> info(Authentication authentication){
+    public ReturnDto<User> info(@AuthenticationPrincipal CustomUserDetail customUserDetail){
         //userName 추출
-        String userName = authentication.getName();
+        String userName = customUserDetail.getUser().getUserName();
 
         User user = userRepository.findByUserName(userName)
                 .orElseThrow(()->new AppException(ErrorCode.USERNAME_NOT_FOUND, "사용자" + userName + "이 없습니다."));
@@ -81,7 +87,7 @@ public class UserController {
     }
 
     @PostMapping("/refresh")
-    public ReturnDto<UserTokenReturnDto> refresh (HttpServletRequest request){
+    public ReturnDto<UserTokenReturnDto> refresh (HttpServletRequest request) {
 
         // 쿠키에서 Refresh Token 추출
         Cookie[] cookies = request.getCookies();
@@ -94,15 +100,15 @@ public class UserController {
         }
 
         //userName 추출
-        String userName = userService.getUserNameByRefreshToken(refreshToken);
+        String userName = jwtService.getUserNameByRefreshToken(refreshToken);
         String newAccessToken = null;
 
         log.info("refreshToken:{}",refreshToken);
         log.info("userName:{}",userName);
 
-        if (userService.validateRefreshToken(refreshToken)) {
+        if (jwtService.validateRefreshToken(refreshToken)) {
             // 새로운 Access Token 발급
-            newAccessToken = userService.getAccessToken(userName);// 새로운 Access Token 생성 로직
+            newAccessToken = jwtService.getAccessToken(userName);// 새로운 Access Token 생성 로직
         }
 
         UserTokenReturnDto returnDto = UserTokenReturnDto.builder().token(newAccessToken).build();
