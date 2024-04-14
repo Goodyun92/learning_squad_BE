@@ -6,6 +6,7 @@ import com.capstone.learning_squad_be.dto.user.UserJoinRequestDto;
 import com.capstone.learning_squad_be.exception.AppException;
 import com.capstone.learning_squad_be.jwt.JwtService;
 import com.capstone.learning_squad_be.repository.user.UserRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,21 +14,12 @@ import org.springframework.transaction.annotation.Transactional;
 import static com.capstone.learning_squad_be.domain.enums.Role.ROLE_USER;
 
 @Service
+@RequiredArgsConstructor
 public class UserService {
 
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder encoder;
     private final JwtService jwtService;
-
-    public UserService(
-            UserRepository userRepository,
-            BCryptPasswordEncoder encoder,
-            JwtService jwtService
-    ) {
-        this.userRepository = userRepository;
-        this.encoder = encoder;
-        this.jwtService = jwtService;
-    }
 
     @Transactional
     public void join(UserJoinRequestDto dto){

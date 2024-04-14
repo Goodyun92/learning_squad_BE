@@ -28,6 +28,6 @@ public class Document {
     @Column(nullable = false)
     private String title;
 
-    @Column(nullable = false)
+    @Column
     private Integer questioinSize;    //문제 수
 }
