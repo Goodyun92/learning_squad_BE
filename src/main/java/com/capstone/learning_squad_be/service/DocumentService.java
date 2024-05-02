@@ -1,12 +1,19 @@
 package com.capstone.learning_squad_be.service;
 
+import com.capstone.learning_squad_be.domain.Answer;
 import com.capstone.learning_squad_be.domain.Document;
+import com.capstone.learning_squad_be.domain.Question;
 import com.capstone.learning_squad_be.domain.enums.ErrorCode;
 import com.capstone.learning_squad_be.dto.document.DocumentUploadRequestDto;
 import com.capstone.learning_squad_be.dto.document.DocumentUploadReturnDto;
+import com.capstone.learning_squad_be.dto.mydocs.DocumentInfo;
+import com.capstone.learning_squad_be.dto.mydocs.MydocsReturnDto;
+import com.capstone.learning_squad_be.dto.mydocs.QuestionInfo;
 import com.capstone.learning_squad_be.exception.AppException;
+import com.capstone.learning_squad_be.repository.AnswerRepository;
 import com.capstone.learning_squad_be.repository.DocumentRepository;
 import com.capstone.learning_squad_be.domain.user.User;
+import com.capstone.learning_squad_be.repository.QuestionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -18,6 +25,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.ArrayList;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -25,6 +34,9 @@ import java.net.URLConnection;
 public class DocumentService {
 
     private final DocumentRepository documentRepository;
+    private final QuestionRepository questionRepository;
+    private final AnswerRepository answerRepository;
+
     private final QuestionService questionService;
 
     public boolean isPdf(String url){
@@ -111,6 +123,69 @@ public class DocumentService {
             return ""; // 파일 확장자가 없는 경우
         }
         return filePath.substring(lastIndex + 1);
+    }
+
+    @Transactional
+    public void delete(Long id, User user){
+        Document selectedDocument = documentRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.DOCUMENT_NOT_FOUND, "문서"+ id + "이 없습니다."));
+
+        //본인의 문서가 아닌 경우
+        if (selectedDocument.getUser().getId() != user.getId()){
+            throw new AppException(ErrorCode.FORBIDDEN, "해당 문서에 대한 삭제 권한이 없습니다.");
+        }
+
+        //cascade 사용?
+        //답변,문제,문서 순으로 삭제
+
+        List<Question> questionList = questionRepository.findByDocument(selectedDocument);
+        for (Question question : questionList){
+            answerRepository.deleteByQuestion(question);
+        }
+
+        questionRepository.deleteAllByDocument(selectedDocument);
+
+        documentRepository.delete(selectedDocument);
+    }
+
+    public MydocsReturnDto getMydocs(User user){
+        List<Document> documents = documentRepository.findByUser(user)
+                .orElseThrow(() -> new AppException(ErrorCode.DOCUMENT_NOT_FOUND, "사용자"+ user.getUserName() +"의 문서가 없습니다."));
+
+        List<DocumentInfo> documentInfos = new ArrayList<>();
+
+        for (Document document : documents){
+            List<Question> questions = questionRepository.findByDocument(document);
+
+            List<QuestionInfo> questionInfos = new ArrayList<>();
+
+            for (Question question : questions){
+                Answer answer = answerRepository.findByQuestion(question);
+                QuestionInfo questionInfo = QuestionInfo.builder()
+                        .questionId(question.getId())
+                        .questionNumber(question.getQuestionNumber())
+                        .content(question.getContent())
+                        .correctAnswer(answer.getCorrectAnswer())
+                        .bestAnswer(answer.getBestAnswer())
+                        .score(answer.getScore())
+                        .build();
+                questionInfos.add(questionInfo);
+            }
+
+            DocumentInfo documentInfo = DocumentInfo.builder()
+                    .documentId(document.getId())
+                    .title(document.getTitle())
+                    .questions(questionInfos)
+                    .build();
+
+            documentInfos.add(documentInfo);
+        }
+
+        MydocsReturnDto returnDto = MydocsReturnDto.builder()
+                .documents(documentInfos)
+                .build();
+
+        return returnDto;
     }
 
 }

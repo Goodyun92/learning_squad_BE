@@ -32,8 +32,7 @@ public class AnswerController {
         Question question = questionRepository.findById(questionId)
             .orElseThrow(()->new AppException(ErrorCode.QUESTION_NOT_FOUND, "문제 Id : " + questionId + "이 없습니다."));
 
-        Answer answer = answerRepository.findByQuestion(question)
-                .orElseThrow(()->new AppException(ErrorCode.ANSWER_NOT_FOUND, "해당 문제의 답안 검색에 내부 오류가 발생했습니다."));
+        Answer answer = answerRepository.findByQuestion(question);
 
         AnswerPostReturnDto returnDto = answerService.postAnswer(answer, dto.getUserAnswer());
 
