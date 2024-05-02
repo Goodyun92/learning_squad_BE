@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.BufferedReader;
@@ -54,7 +55,8 @@ public class QuestionService {
 
     }
 
-    private Integer processQuestionFromCSV(String csvUrl, Document document) {
+    @Transactional
+    public Integer processQuestionFromCSV(String csvUrl, Document document) {
         Integer questionCount = 0;
 
         try {
