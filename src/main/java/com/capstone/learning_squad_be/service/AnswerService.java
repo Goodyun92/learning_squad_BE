@@ -7,6 +7,7 @@ import com.capstone.learning_squad_be.dto.flask.GetSimilarityReturnDto;
 import com.capstone.learning_squad_be.repository.AnswerRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -15,6 +16,9 @@ import org.springframework.web.client.RestTemplate;
 @RequiredArgsConstructor
 @Slf4j
 public class AnswerService {
+
+    @Value("${flask.base-url}")
+    private String baseUrl;
 
     private final AnswerRepository answerRepository;
     private final RestTemplate restTemplate;
@@ -49,7 +53,7 @@ public class AnswerService {
 
         String url = "/get-similarity";
 
-        ResponseEntity<GetSimilarityReturnDto> response = restTemplate.postForEntity(url,requestDto,GetSimilarityReturnDto.class);
+        ResponseEntity<GetSimilarityReturnDto> response = restTemplate.postForEntity(baseUrl+url,requestDto,GetSimilarityReturnDto.class);
 
         return response.getBody().getSimilarity_score();
 
