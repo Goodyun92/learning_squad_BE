@@ -20,10 +20,13 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig extends WebSecurityConfigurerAdapter{
 
     private final JwtExceptionFilter jwtExceptionFilter;
-
     private final JwtTokenProvider jwtTokenProvider;
 
-    public SecurityConfig(@Qualifier("access")JwtTokenProvider jwtTokenProvider, JwtExceptionFilter jwtExceptionFilter){
+
+    public SecurityConfig(
+            @Qualifier("access")JwtTokenProvider jwtTokenProvider,
+            JwtExceptionFilter jwtExceptionFilter
+    ){
         this.jwtTokenProvider = jwtTokenProvider;
         this.jwtExceptionFilter = jwtExceptionFilter;
     }

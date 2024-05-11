@@ -9,9 +9,6 @@ import com.capstone.learning_squad_be.dto.flask.CreateQuestionReturnDto;
 import com.capstone.learning_squad_be.exception.AppException;
 import com.capstone.learning_squad_be.repository.AnswerRepository;
 import com.capstone.learning_squad_be.repository.QuestionRepository;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nimbusds.jose.shaded.json.JSONObject;
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -32,7 +30,9 @@ import java.net.URLConnection;
 @Slf4j
 public class QuestionService {
 
-//    private final FlaskApiClient flaskApiClient;
+    @Value("${flask.base-url}")
+    private String baseUrl;
+
     private final QuestionRepository questionRepository;
     private final AnswerRepository answerRepository;
     private final RestTemplate restTemplate;
@@ -45,7 +45,7 @@ public class QuestionService {
 
         String url = "/test-s3-url";
 
-        ResponseEntity<CreateQuestionReturnDto> response = restTemplate.postForEntity(url,requestDto,CreateQuestionReturnDto.class);
+        ResponseEntity<CreateQuestionReturnDto> response = restTemplate.postForEntity(baseUrl+url,requestDto,CreateQuestionReturnDto.class);
 
         String csvUrl = response.getBody().getCsv_url();
         log.info("csvUrl:{}",csvUrl);
