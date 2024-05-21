@@ -29,7 +29,7 @@ public class JwtExceptionFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-        log.info("exception filter is running");
+//        log.info("exception filter is running");
 
         String path = request.getRequestURI();
 
