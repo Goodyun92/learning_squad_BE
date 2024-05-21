@@ -17,7 +17,7 @@ import org.springframework.web.client.RestTemplate;
 @Slf4j
 public class AnswerService {
 
-    @Value("${flask.base-url}")
+    @Value("${flask.similarity.base-url}")
     private String baseUrl;
 
     private final AnswerRepository answerRepository;

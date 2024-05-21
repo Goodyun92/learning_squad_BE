@@ -30,7 +30,7 @@ import java.net.URLConnection;
 @Slf4j
 public class QuestionService {
 
-    @Value("${flask.base-url}")
+    @Value("${flask.upload.base-url}")
     private String baseUrl;
 
     private final QuestionRepository questionRepository;
