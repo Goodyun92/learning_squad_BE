@@ -19,6 +19,7 @@ public enum ErrorCode {
     SHORT_PDF_LENGTH(409, HttpStatus.CONFLICT,""),
     PDF_PROCESSING_ERR(409, HttpStatus.CONFLICT,""),
     CSV_PROCESSING_ERR(409, HttpStatus.CONFLICT,""),
+    MODEL_SERVER_ERR(409, HttpStatus.CONFLICT,""),
 
     NOT_FOUND(404, HttpStatus.NOT_FOUND, "Not Found"),
     FORBIDDEN(403, HttpStatus.FORBIDDEN, "Forbidden"),
