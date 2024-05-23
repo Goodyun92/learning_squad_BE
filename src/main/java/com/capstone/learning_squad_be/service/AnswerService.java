@@ -1,10 +1,14 @@
 package com.capstone.learning_squad_be.service;
 
 import com.capstone.learning_squad_be.domain.Answer;
+import com.capstone.learning_squad_be.domain.Document;
+import com.capstone.learning_squad_be.domain.enums.ErrorCode;
 import com.capstone.learning_squad_be.dto.answer.AnswerPostReturnDto;
 import com.capstone.learning_squad_be.dto.flask.GetSimilarityRequestDto;
 import com.capstone.learning_squad_be.dto.flask.GetSimilarityReturnDto;
+import com.capstone.learning_squad_be.exception.AppException;
 import com.capstone.learning_squad_be.repository.AnswerRepository;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,10 +27,17 @@ public class AnswerService {
     private final AnswerRepository answerRepository;
     private final RestTemplate restTemplate;
 
+    private static final String NAME = "lsls";
+    private static final String FALLBACK = "getSimilarityFallback";
+
     public AnswerPostReturnDto postAnswer(Answer answer, String userAnswer){
         String correctAnswer = answer.getCorrectAnswer();
 
         Integer newScore = getSimilarity(correctAnswer,userAnswer);
+
+        if (newScore <0){
+            new AppException(ErrorCode.MODEL_SERVER_ERR, "모델 서버 내부 에러.");
+        }
 
         if(newScore > answer.getScore()){
             answer.setBestAnswer(userAnswer);
@@ -45,6 +56,7 @@ public class AnswerService {
         return returnDto;
     }
 
+    @CircuitBreaker(name = NAME, fallbackMethod = FALLBACK)
     private Integer getSimilarity(String correctAnswer, String userAnswer){
         GetSimilarityRequestDto requestDto = GetSimilarityRequestDto.builder()
                 .sentence1(correctAnswer)
@@ -56,6 +68,10 @@ public class AnswerService {
         ResponseEntity<GetSimilarityReturnDto> response = restTemplate.postForEntity(baseUrl+url,requestDto,GetSimilarityReturnDto.class);
 
         return response.getBody().getSimilarity_score();
+    }
 
+    private Integer getSimilarityFallback(String correctAnswer, String userAnswer, Throwable t){
+        log.error("Fallback : "+ t.getMessage());
+        return -1; // fallback data
     }
 }
