@@ -11,6 +11,7 @@ import com.capstone.learning_squad_be.repository.AnswerRepository;
 import com.capstone.learning_squad_be.repository.QuestionRepository;
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -37,6 +38,10 @@ public class QuestionService {
     private final AnswerRepository answerRepository;
     private final RestTemplate restTemplate;
 
+    private static final String NAME = "lsls";
+    private static final String FALLBACK = "createQuestionFallback";
+
+    @CircuitBreaker(name = NAME, fallbackMethod = FALLBACK)
     public Integer createQuestion(String documentUrl, Document document){
 
         CreateQuestionRequestDto requestDto = CreateQuestionRequestDto.builder()
@@ -53,6 +58,11 @@ public class QuestionService {
         //문제 수 리턴
          return processQuestionFromCSV(csvUrl,document);
 
+    }
+
+    private Integer createQuestionFallback(String documentUrl, Document document, Throwable t){
+        log.error("Fallback : "+ t.getMessage());
+        return -1; // fallback data
     }
 
     @Transactional
