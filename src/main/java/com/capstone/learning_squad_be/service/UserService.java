@@ -28,6 +28,10 @@ public class UserService {
         String password = dto.getPassword();
         String nickName = dto.getNickName();
 
+        if (password == null){
+            throw new AppException(ErrorCode.PASSWORD_NOT_FOUND, "회원 가입시 패스워드는 비워둘 수 없습니다.");
+        }
+
         // userName 중복 check
         userRepository.findByUserName(userName)
                 .ifPresent(user -> {

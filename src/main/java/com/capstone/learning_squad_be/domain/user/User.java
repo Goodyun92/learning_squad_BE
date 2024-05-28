@@ -1,5 +1,6 @@
 package com.capstone.learning_squad_be.domain.user;
 
+import com.capstone.learning_squad_be.oauth.OAuthProvider;
 import com.capstone.learning_squad_be.domain.enums.Role;
 import lombok.*;
 
@@ -18,16 +19,19 @@ public class User {
     private Long id;
 
     @Column(nullable = false, unique = true)
-    private String userName;    //아이디
+    private String userName;    // 아이디, oauth의 경우 email
 
-    @Column(nullable = false)
+    @Column
     private String password;
 
     @Column(nullable = false, unique = true)
-    private String nickName;    //닉네임
+    private String nickName;    // 닉네임
 
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private Role role;
+
+    @Enumerated(EnumType.STRING)
+    private OAuthProvider oAuthProvider;
 
 }

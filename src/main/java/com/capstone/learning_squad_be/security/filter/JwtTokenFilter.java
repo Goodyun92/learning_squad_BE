@@ -33,7 +33,7 @@ public class JwtTokenFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
 
         // 회원가입, 로그인, 토큰 갱신 요청, 루트 경로 및 actuator/health에 대해서는 토큰 필터를 적용하지 않음
-        if (path.startsWith("/api/users/join") || path.startsWith("/api/users/login") || path.startsWith("/api/users/refresh") || path.equals("/") || path.startsWith("/actuator/health")) {
+        if (path.startsWith("/kakao/callback") || path.startsWith("/api/users/join") || path.startsWith("/api/users/login") || path.startsWith("/api/users/refresh") || path.equals("/") || path.startsWith("/actuator/health")) {
             filterChain.doFilter(request, response);
             return;
         }
