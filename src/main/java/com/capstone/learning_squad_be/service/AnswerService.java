@@ -36,7 +36,7 @@ public class AnswerService {
         Integer newScore = getSimilarity(correctAnswer,userAnswer);
 
         if (newScore <0){
-            new AppException(ErrorCode.MODEL_SERVER_ERR, "모델 서버 내부 에러.");
+            new AppException(ErrorCode.MODEL_SERVER_ERR, "모델 서버 응답 에러, 잠시 후 다시 시도해주세요.");
         }
 
         if(newScore > answer.getScore()){

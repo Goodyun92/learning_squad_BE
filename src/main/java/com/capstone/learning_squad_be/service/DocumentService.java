@@ -80,7 +80,7 @@ public class DocumentService {
         //문제 만들기 호출 문제수 리턴받기
         Integer questionSize = questionService.createQuestion(dto.getDocumentUrl(),document);
         if (questionSize<0) {
-            new AppException(ErrorCode.MODEL_SERVER_ERR, "모델 서버 내부 에러.");
+            new AppException(ErrorCode.MODEL_SERVER_ERR, "모델 서버 응답 에러, 잠시 후 다시 시도해주세요.");
         }
         log.info("questionSize:{}",questionSize);
 

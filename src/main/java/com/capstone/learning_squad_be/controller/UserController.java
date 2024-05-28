@@ -2,12 +2,15 @@ package com.capstone.learning_squad_be.controller;
 
 import com.capstone.learning_squad_be.domain.enums.ErrorCode;
 import com.capstone.learning_squad_be.domain.user.User;
+import com.capstone.learning_squad_be.dto.oauth.TokensReturnDto;
 import com.capstone.learning_squad_be.dto.common.ReturnDto;
 import com.capstone.learning_squad_be.dto.user.UserJoinRequestDto;
 import com.capstone.learning_squad_be.dto.user.UserLoginRequestDto;
 import com.capstone.learning_squad_be.dto.user.UserTokenReturnDto;
 import com.capstone.learning_squad_be.exception.AppException;
 import com.capstone.learning_squad_be.jwt.JwtService;
+import com.capstone.learning_squad_be.oauth.OAuthLoginService;
+import com.capstone.learning_squad_be.oauth.kakao.KakaoLoginParams;
 import com.capstone.learning_squad_be.repository.user.UserRepository;
 import com.capstone.learning_squad_be.security.CustomUserDetail;
 import com.capstone.learning_squad_be.service.UserService;
@@ -19,7 +22,6 @@ import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
 
 @Slf4j
 @RestController
@@ -30,6 +32,7 @@ public class UserController {
     private final UserService userService;
     private final UserRepository userRepository;
     private final JwtService jwtService;
+    private final OAuthLoginService oAuthLoginService;
 
     @PostMapping("/join")
     public ReturnDto<Void> join(@RequestBody UserJoinRequestDto dto){
@@ -60,6 +63,30 @@ public class UserController {
 
         UserTokenReturnDto returnDto = UserTokenReturnDto.builder().token(accessToken).build();
 
+        return ReturnDto.ok(returnDto);
+    }
+
+    @PostMapping("login/oauth/kakao")
+    public ReturnDto<UserTokenReturnDto> loginKakao(@RequestBody KakaoLoginParams params, HttpServletResponse response) {
+        TokensReturnDto dto = oAuthLoginService.getTokens(params);
+
+        String accessToken = dto.getAccessToken();
+        String refreshToken = dto.getRefreshToken();
+
+        Cookie cookie = new Cookie("refreshToken", refreshToken);
+
+        // expires in 7 days
+        cookie.setMaxAge(7 * 24 * 60 * 60);
+
+        // optional properties
+        cookie.setSecure(true);
+        cookie.setHttpOnly(true);
+        cookie.setPath("/");
+
+        // add cookie to response
+        response.addCookie(cookie);
+
+        UserTokenReturnDto returnDto = UserTokenReturnDto.builder().token(accessToken).build();
         return ReturnDto.ok(returnDto);
     }
 
