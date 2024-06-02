@@ -28,21 +28,18 @@ public class UserService {
         String password = dto.getPassword();
         String nickName = dto.getNickName();
 
-        if (password == null){
+        if (password == null || password.trim().isEmpty()){
             throw new AppException(ErrorCode.PASSWORD_NOT_FOUND, "회원 가입시 패스워드는 비워둘 수 없습니다.");
+        }
+
+        if (nickName == null || nickName.trim().isEmpty()){
+            throw new AppException(ErrorCode.NICKNAME_NOT_FOUND, "회원 가입시 닉네임은 비워둘 수 없습니다.");
         }
 
         // userName 중복 check
         userRepository.findByUserName(userName)
                 .ifPresent(user -> {
                             throw new AppException(ErrorCode.USERNAME_DUPLICATED, userName + "는 이미 존재합니다.");
-                        }
-                );
-
-        // nickName 중복 check
-        userRepository.findByNickName(nickName)
-                .ifPresent(user -> {
-                            throw new AppException(ErrorCode.NICKNAME_DUPLICATED, nickName + "는 이미 존재합니다.");
                         }
                 );
 
@@ -75,14 +72,6 @@ public class UserService {
     public User updateNickName(String userName, String nickName) {
         User user = userRepository.findByUserName(userName)
                 .orElseThrow(() -> new AppException(ErrorCode.USERNAME_NOT_FOUND, "사용자"+ userName + "이 없습니다."));
-
-        // nickName 중복 check
-        userRepository.findByNickName(nickName)
-                .ifPresent(thatuser -> {
-                            throw new AppException(ErrorCode.NICKNAME_DUPLICATED, nickName + "는 이미 존재합니다.");
-                        }
-                );
-
 
         user.setNickName(nickName);
         userRepository.save(user);
