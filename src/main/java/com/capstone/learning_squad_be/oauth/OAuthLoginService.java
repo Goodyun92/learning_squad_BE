@@ -40,9 +40,11 @@ public class OAuthLoginService {
 
     private User newUser(OAuthInfoResponse oAuthInfoResponse) {
 
+        String nickName = oAuthInfoResponse.getNickname() + "_" + oAuthInfoResponse.getOAuthProvider().toString();
+
         User user = User.builder()
                 .userName(oAuthInfoResponse.getEmail())
-                .nickName(oAuthInfoResponse.getNickname())
+                .nickName(nickName)
                 .oAuthProvider(oAuthInfoResponse.getOAuthProvider())
                 .role(ROLE_USER)
                 .build();

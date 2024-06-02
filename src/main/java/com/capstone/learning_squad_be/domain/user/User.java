@@ -24,7 +24,7 @@ public class User {
     @Column
     private String password;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String nickName;    // 닉네임
 
     @Column(nullable = false)
