@@ -68,6 +68,8 @@ public class UserController {
 
     @PostMapping("login/oauth/kakao")
     public ReturnDto<UserTokenReturnDto> loginKakao(@RequestBody KakaoLoginParams params, HttpServletResponse response) {
+        log.info("controller get kakao login request");
+
         TokensReturnDto dto = oAuthLoginService.getTokens(params);
 
         String accessToken = dto.getAccessToken();
