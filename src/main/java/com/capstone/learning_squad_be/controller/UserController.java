@@ -6,6 +6,7 @@ import com.capstone.learning_squad_be.dto.oauth.TokensReturnDto;
 import com.capstone.learning_squad_be.dto.common.ReturnDto;
 import com.capstone.learning_squad_be.dto.user.UserJoinRequestDto;
 import com.capstone.learning_squad_be.dto.user.UserLoginRequestDto;
+import com.capstone.learning_squad_be.dto.user.UserNickNameRequestDto;
 import com.capstone.learning_squad_be.dto.user.UserTokenReturnDto;
 import com.capstone.learning_squad_be.exception.AppException;
 import com.capstone.learning_squad_be.jwt.JwtService;
@@ -93,13 +94,13 @@ public class UserController {
     }
 
     @PutMapping("/updateNickName")
-    public ReturnDto<User> updateNickName(@RequestParam String nickName, @AuthenticationPrincipal CustomUserDetail customUserDetail) {
+    public ReturnDto<User> updateNickName(@RequestBody UserNickNameRequestDto dto, @AuthenticationPrincipal CustomUserDetail customUserDetail) {
         log.info("update start");
         // 현재 userName
         String userName = customUserDetail.getUser().getUserName();
         log.info("userName:{}",userName);
 
-        User user = userService.updateNickName(userName, nickName);
+        User user = userService.updateNickName(userName, dto.getNickName());
 
         return ReturnDto.ok(user);
     }
