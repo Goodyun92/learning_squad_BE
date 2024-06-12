@@ -3,11 +3,13 @@ package com.capstone.learning_squad_be.service;
 import com.capstone.learning_squad_be.domain.Answer;
 import com.capstone.learning_squad_be.domain.Document;
 import com.capstone.learning_squad_be.domain.enums.ErrorCode;
+import com.capstone.learning_squad_be.domain.user.User;
 import com.capstone.learning_squad_be.dto.answer.AnswerPostReturnDto;
 import com.capstone.learning_squad_be.dto.flask.GetSimilarityRequestDto;
 import com.capstone.learning_squad_be.dto.flask.GetSimilarityReturnDto;
 import com.capstone.learning_squad_be.exception.AppException;
 import com.capstone.learning_squad_be.repository.AnswerRepository;
+import com.capstone.learning_squad_be.repository.QuestionRepository;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,12 +27,19 @@ public class AnswerService {
     private String baseUrl;
 
     private final AnswerRepository answerRepository;
+    private final QuestionRepository questionRepository;
     private final RestTemplate restTemplate;
 
     private static final String NAME = "lsls";
     private static final String FALLBACK = "getSimilarityFallback";
 
-    public AnswerPostReturnDto postAnswer(Answer answer, String userAnswer){
+    public AnswerPostReturnDto postAnswer(Answer answer, String userAnswer, User user){
+        User ownerUser = answer.getQuestion().getDocument().getUser();
+
+        if(!ownerUser.equals(user)){
+            new AppException(ErrorCode.FORBIDDEN, "문제 답변 입력에 대한 권한이 없습니다.");
+        }
+
         String correctAnswer = answer.getCorrectAnswer();
 
         Integer newScore = getSimilarity(correctAnswer,userAnswer);
@@ -46,6 +55,7 @@ public class AnswerService {
         }
 
         AnswerPostReturnDto returnDto = AnswerPostReturnDto.builder()
+                .id(answer.getId())
                 .newScore(newScore)
                 .bestScore(answer.getScore())
                 .userAnswer(userAnswer)
