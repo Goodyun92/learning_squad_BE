@@ -8,6 +8,8 @@ import javax.persistence.Lob;
 @Builder
 @Data
 public class AnswerPostReturnDto {
+    Long id;
+
     Integer newScore;
 
     Integer bestScore;
