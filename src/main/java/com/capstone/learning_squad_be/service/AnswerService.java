@@ -17,6 +17,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.reactive.function.BodyInserters;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
 @Service
 @RequiredArgsConstructor
@@ -27,13 +30,12 @@ public class AnswerService {
     private String baseUrl;
 
     private final AnswerRepository answerRepository;
-    private final QuestionRepository questionRepository;
-    private final RestTemplate restTemplate;
+    private final WebClient webClient;
 
     private static final String NAME = "lsls";
     private static final String FALLBACK = "getSimilarityFallback";
 
-    public AnswerPostReturnDto postAnswer(Answer answer, String userAnswer, User user){
+    public Mono<AnswerPostReturnDto> postAnswer(Answer answer, String userAnswer, User user){
         User ownerUser = answer.getQuestion().getDocument().getUser();
 
         if(!ownerUser.equals(user)){
@@ -42,46 +44,49 @@ public class AnswerService {
 
         String correctAnswer = answer.getCorrectAnswer();
 
-        Integer newScore = getSimilarity(correctAnswer,userAnswer);
+        return getSimilarity(correctAnswer, userAnswer)
+                .flatMap(newScore -> {
+                    if (newScore < 0) {
+                        return Mono.error(new AppException(ErrorCode.MODEL_SERVER_ERR, "모델 서버 응답 에러, 잠시 후 다시 시도해주세요."));
+                    }
 
-        if (newScore <0){
-            new AppException(ErrorCode.MODEL_SERVER_ERR, "모델 서버 응답 에러, 잠시 후 다시 시도해주세요.");
-        }
+                    if (newScore > answer.getScore()) {
+                        answer.setBestAnswer(userAnswer);
+                        answer.setScore(newScore);
+                        answerRepository.save(answer);
+                    }
 
-        if(newScore > answer.getScore()){
-            answer.setBestAnswer(userAnswer);
-            answer.setScore(newScore);
-            answerRepository.save(answer);
-        }
+                    AnswerPostReturnDto returnDto = AnswerPostReturnDto.builder()
+                            .id(answer.getId())
+                            .newScore(newScore)
+                            .bestScore(answer.getScore())
+                            .userAnswer(userAnswer)
+                            .bestAnswer(answer.getBestAnswer())
+                            .correctAnswer(answer.getCorrectAnswer())
+                            .build();
 
-        AnswerPostReturnDto returnDto = AnswerPostReturnDto.builder()
-                .id(answer.getId())
-                .newScore(newScore)
-                .bestScore(answer.getScore())
-                .userAnswer(userAnswer)
-                .bestAnswer(answer.getBestAnswer())
-                .correctAnswer(answer.getCorrectAnswer())
-                .build();
-
-        return returnDto;
+                    return Mono.just(returnDto);
+                });
     }
 
     @CircuitBreaker(name = NAME, fallbackMethod = FALLBACK)
-    private Integer getSimilarity(String correctAnswer, String userAnswer){
+    private Mono<Integer> getSimilarity(String correctAnswer, String userAnswer){
         GetSimilarityRequestDto requestDto = GetSimilarityRequestDto.builder()
                 .sentence1(correctAnswer)
                 .sentence2(userAnswer)
                 .build();
 
-        String url = "/get-similarity";
-
-        ResponseEntity<GetSimilarityReturnDto> response = restTemplate.postForEntity(baseUrl+url,requestDto,GetSimilarityReturnDto.class);
-
-        return response.getBody().getSimilarity_score();
+        return webClient.post()
+                .uri(baseUrl+"/get-similarity")
+                .body(BodyInserters.fromValue(requestDto))
+                .retrieve()
+                .bodyToMono(GetSimilarityReturnDto.class)
+                .map(GetSimilarityReturnDto::getSimilarity_score);
     }
 
-    private Integer getSimilarityFallback(String correctAnswer, String userAnswer, Throwable t){
+    private Mono<Integer> getSimilarityFallback(String correctAnswer, String userAnswer, Throwable t){
         log.error("Fallback : "+ t.getMessage());
-        return -1; // fallback data
+        return Mono.just(-1); // fallback data
     }
+
 }

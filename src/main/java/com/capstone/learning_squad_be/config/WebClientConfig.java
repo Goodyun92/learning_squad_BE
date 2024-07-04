@@ -14,8 +14,6 @@ import java.time.Duration;
 
 @Configuration
 public class WebClientConfig {
-    @Value("${model.base-url}")
-    private String baseUrl;
 
     @Bean
     public WebClient webClient() {
@@ -26,7 +24,6 @@ public class WebClientConfig {
                         .addHandlerLast(new ReadTimeoutHandler(240)));  // read timeout 4분 설정
 
         return WebClient.builder()
-                .baseUrl(baseUrl)
                 .clientConnector(new ReactorClientHttpConnector(httpClient))
                 .build();
     }

@@ -18,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Mono;
 
 import java.io.IOException;
 import java.net.URL;
@@ -34,7 +35,7 @@ public class DocumentController {
     private final UserRepository userRepository;
 
     @PostMapping("/upload")
-    public ReturnDto<DocumentUploadReturnDto> upload(@RequestBody DocumentUploadRequestDto dto, @AuthenticationPrincipal CustomUserDetail customUserDetail){
+    public Mono<ReturnDto<DocumentUploadReturnDto>> upload(@RequestBody DocumentUploadRequestDto dto, @AuthenticationPrincipal CustomUserDetail customUserDetail){
 
         log.info("upload api start!");
 
@@ -52,11 +53,8 @@ public class DocumentController {
                 .orElseThrow(()->new AppException(ErrorCode.USERNAME_NOT_FOUND, "사용자" + userName + "이 없습니다."));
         log.info("userName:{}",userName);
 
-        //return dto로 받기
-        DocumentUploadReturnDto returnDto = documentService.upload(dto,user);
-        log.info("returnDto:{}",returnDto);
-
-        return ReturnDto.ok(returnDto);
+        return documentService.upload(dto, user)
+                .map(ReturnDto::ok);
     }
 
     @DeleteMapping("/delete")
