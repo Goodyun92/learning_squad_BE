@@ -19,6 +19,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -36,33 +38,36 @@ public class QuestionService {
 
     private final QuestionRepository questionRepository;
     private final AnswerRepository answerRepository;
-    private final RestTemplate restTemplate;
+    private final WebClient webClient;
 
     private static final String NAME = "lsls";
     private static final String FALLBACK = "createQuestionFallback";
 
+
     @CircuitBreaker(name = NAME, fallbackMethod = FALLBACK)
-    public Integer createQuestion(String documentUrl, Document document){
+    public Mono<Integer> createQuestion(String documentUrl, Document document) {
 
         CreateQuestionRequestDto requestDto = CreateQuestionRequestDto.builder()
                 .s3_url(documentUrl)
                 .build();
 
-        String url = "/test-s3-url";
-
-        ResponseEntity<CreateQuestionReturnDto> response = restTemplate.postForEntity(baseUrl+url,requestDto,CreateQuestionReturnDto.class);
-
-        String csvUrl = response.getBody().getCsv_url();
-        log.info("csvUrl:{}",csvUrl);
-
-        //문제 수 리턴
-         return processQuestionFromCSV(csvUrl,document);
-
+        return webClient.mutate()
+                .build()
+                .post()
+                .uri(baseUrl + "/test-s3-url")
+                .bodyValue(requestDto)
+                .retrieve()
+                .bodyToMono(CreateQuestionReturnDto.class)
+                .flatMap(response -> {
+                    String csvUrl = response.getCsv_url();
+                    log.info("csvUrl:{}", csvUrl);
+                    return Mono.fromCallable(() -> processQuestionFromCSV(csvUrl, document));
+                });
     }
 
-    private Integer createQuestionFallback(String documentUrl, Document document, Throwable t){
-        log.error("Fallback : "+ t.getMessage());
-        return -1; // fallback data
+    private Mono<Integer> createQuestionFallback(String documentUrl, Document document, Throwable t) {
+        log.error("Fallback : " + t.getMessage());
+        return Mono.just(-1); // fallback data
     }
 
     @Transactional
