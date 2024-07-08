@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import reactor.core.publisher.Mono;
 
 @RestController
 @RequiredArgsConstructor
@@ -31,7 +32,7 @@ public class AnswerController {
     private final AnswerService answerService;
 
     @PostMapping
-    public ReturnDto<AnswerPostReturnDto> postAnswer (@RequestBody AnswerPostRequestDto dto, @AuthenticationPrincipal CustomUserDetail customUserDetail){
+    public Mono<ReturnDto<AnswerPostReturnDto>> postAnswer (@RequestBody AnswerPostRequestDto dto, @AuthenticationPrincipal CustomUserDetail customUserDetail){
         String userName = customUserDetail.getUser().getUserName();
         User user = userRepository.findByUserName(userName)
                 .orElseThrow(()->new AppException(ErrorCode.USERNAME_NOT_FOUND, "사용자" + userName + "이 없습니다."));
@@ -43,8 +44,7 @@ public class AnswerController {
 
         Answer answer = answerRepository.findByQuestion(question);
 
-        AnswerPostReturnDto returnDto = answerService.postAnswer(answer, dto.getUserAnswer(), user);
-
-        return ReturnDto.ok(returnDto);
+        return answerService.postAnswer(answer, dto.getUserAnswer(), user)
+                .map(ReturnDto::ok);
     }
 }

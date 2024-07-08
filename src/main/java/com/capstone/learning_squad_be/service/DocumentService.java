@@ -20,6 +20,7 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import reactor.core.publisher.Mono;
 
 
 import java.io.IOException;
@@ -52,7 +53,7 @@ public class DocumentService {
 
     //리턴 dto 타입
     @Transactional
-    public DocumentUploadReturnDto upload(DocumentUploadRequestDto dto, User user){
+    public Mono<DocumentUploadReturnDto> upload(DocumentUploadRequestDto dto, User user){
         try {
             // S3 URL로부터 PDF 파일 다운로드
             URL url = new URL(dto.getDocumentUrl());
@@ -77,26 +78,26 @@ public class DocumentService {
 
         log.info("documentUrl:{}",document.getUrl());
 
-        //문제 만들기 호출 문제수 리턴받기
-        Integer questionSize = questionService.createQuestion(dto.getDocumentUrl(),document);
-        if (questionSize<0) {
-            new AppException(ErrorCode.MODEL_SERVER_ERR, "모델 서버 응답 에러, 잠시 후 다시 시도해주세요.");
-        }
-        log.info("questionSize:{}",questionSize);
+        // 문제 만들기 호출 문제수 리턴받기
+        return questionService.createQuestion(dto.getDocumentUrl(), document)
+                .flatMap(questionSize -> {
+                    if (questionSize < 0) {
+                        return Mono.error(new AppException(ErrorCode.MODEL_SERVER_ERR, "모델 서버 응답 에러, 잠시 후 다시 시도해주세요."));
+                    }
+                    log.info("questionSize:{}", questionSize);
 
-        //문제수 document 업데이트
-        document.setQuestioinSize(questionSize);
-        documentRepository.save(document);
+                    // 문제수 document 업데이트
+                    document.setQuestioinSize(questionSize);
+                    documentRepository.save(document);
 
-        DocumentUploadReturnDto returnDto =
-                DocumentUploadReturnDto.builder()
-                        .id(document.getId())
-                        .title(document.getTitle())
-                        .questionSize(document.getQuestioinSize())
-                        .build();
+                    DocumentUploadReturnDto returnDto = DocumentUploadReturnDto.builder()
+                            .id(document.getId())
+                            .title(document.getTitle())
+                            .questionSize(document.getQuestioinSize())
+                            .build();
 
-        return  returnDto;
-        //리턴 dto로 리턴
+                    return Mono.just(returnDto);
+                });
     }
 
     private boolean validateDocument(PDDocument document){
