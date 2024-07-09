@@ -51,15 +51,15 @@ public class UserController {
 
         Cookie cookie = new Cookie("refreshToken", refreshToken);
 
-        // expires in 7 days
+        // 만료 7일
         cookie.setMaxAge(7 * 24 * 60 * 60);
 
-        // optional properties
+        // 쿠키 옵션
         cookie.setSecure(true);
         cookie.setHttpOnly(true);
         cookie.setPath("/");
 
-        // add cookie to response
+        // response
         response.addCookie(cookie);
 
         UserTokenReturnDto returnDto = UserTokenReturnDto.builder().token(accessToken).build();
@@ -78,15 +78,15 @@ public class UserController {
 
         Cookie cookie = new Cookie("refreshToken", refreshToken);
 
-        // expires in 7 days
+        // 만료 7일
         cookie.setMaxAge(7 * 24 * 60 * 60);
 
-        // optional properties
+        // 쿠키 옵션
         cookie.setSecure(true);
         cookie.setHttpOnly(true);
         cookie.setPath("/");
 
-        // add cookie to response
+        // response
         response.addCookie(cookie);
 
         UserTokenReturnDto returnDto = UserTokenReturnDto.builder().token(accessToken).build();

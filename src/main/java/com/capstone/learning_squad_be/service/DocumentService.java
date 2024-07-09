@@ -139,7 +139,6 @@ public class DocumentService {
             throw new AppException(ErrorCode.FORBIDDEN, "해당 문서에 대한 삭제 권한이 없습니다.");
         }
 
-        //cascade 사용?
         //답변,문제,문서 순으로 삭제
 
         List<Question> questionList = questionRepository.findByDocument(selectedDocument);
