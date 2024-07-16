@@ -14,6 +14,9 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
 @EnableWebSecurity
@@ -43,7 +46,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter{
         http
                 .httpBasic().disable()
                 .csrf().disable()
-                .cors().and()
+                .cors().configurationSource(corsConfigurationSource())
+                .and()
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 .and()
                 .authorizeRequests()
@@ -56,6 +60,20 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter{
                 .exceptionHandling()
                 .authenticationEntryPoint(new JwtAuthenticationEntryPoint()) // 인증 예외 처리 핸들러
                 .accessDeniedHandler(new JwtAccessDeniedHandler()); // 인가 예외 처리 핸들러
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+
+        configuration.addAllowedOrigin("*");
+        configuration.addAllowedHeader("*");
+        configuration.addAllowedMethod("*");
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 
 }
